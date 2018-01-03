@@ -12,14 +12,14 @@ import torchvision.transforms as transforms
 
 import os
 import argparse
-
+from LSUV import LSUVinit
 from models import *
 from utils import progress_bar
 from torch.autograd import Variable
 lr_decay = 0.1
 
 parser = argparse.ArgumentParser(description='PyTorch CIFAR10 Training')
-parser.add_argument('--lr', default=0.1, type=float, help='learning rate')
+parser.add_argument('--lr', default=0.01, type=float, help='learning rate')
 parser.add_argument('--resume', '-r', action='store_true', help='resume from checkpoint')
 args = parser.parse_args()
 
@@ -54,28 +54,28 @@ if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint/ckpt.t7')
+    checkpoint = torch.load('./checkpoint/fitnet4_ckpt.t7')
     net = checkpoint['net']
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 else:
     print('==> Building model..')
-    # net = VGG('VGG19')
-    #    net = ResNet18()
-    # net = GoogLeNet()
-    # net = DenseNet121()
-    # net = ResNeXt29_2x64d()
-    # net = MobileNet()
-    net = LeNet()
-
+    net = VGG('FitNet4', wnb = True)
 if use_cuda:
     net.cuda()
-    net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
+    #net = torch.nn.DataParallel(net, device_ids=range(torch.cuda.device_count()))
     cudnn.benchmark = True
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(net.parameters(), lr=args.lr, momentum=0.9, weight_decay=5e-4)
 steps_lr = [50, 75, 90]
+for batch_idx, (inputs, targets) in enumerate(trainloader):
+    if use_cuda:
+        inputs, targets = inputs.cuda(), targets.cuda()
+    inputs, targets = Variable(inputs), Variable(targets)
+    break
+net = LSUVinit(net,inputs, needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = True, cuda = use_cuda)
+print(net)
 # Training
 def train(epoch):
     print('\nEpoch: %d' % epoch)
@@ -89,6 +89,7 @@ def train(epoch):
         optimizer.zero_grad()
         inputs, targets = Variable(inputs), Variable(targets)
         outputs = net(inputs)
+        #print(outputs)
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
@@ -132,17 +133,17 @@ def test(epoch):
     if acc > best_acc:
         print('Saving.., acc = ' + str(acc))
         state = {
-            'net': net.module if use_cuda else net,
+            'net': net,#net.module if use_cuda else net,
             'acc': acc,
             'epoch': epoch,
         }
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/lenet_quick.t7')
+        torch.save(state, './checkpoint/fitnet4_quick_wnb.t7')
         best_acc = acc
 
 
-for epoch in range(0,400):
+for epoch in range(0,100):
     train(epoch)
     # update the optimizer learning rate
     if epoch in steps_lr:

@@ -54,19 +54,18 @@ if args.resume:
     # Load checkpoint.
     print('==> Resuming from checkpoint..')
     assert os.path.isdir('checkpoint'), 'Error: no checkpoint directory found!'
-    checkpoint = torch.load('./checkpoint/ckpt.t7')
+    checkpoint = torch.load('./checkpoint/gor_initckpt.t7')
     net = checkpoint['net']
     best_acc = checkpoint['acc']
     start_epoch = checkpoint['epoch']
 else:
     print('==> Building model..')
     # net = VGG('VGG19')
-    #    net = ResNet18()
+    net = ResNet18()
     # net = GoogLeNet()
     # net = DenseNet121()
     # net = ResNeXt29_2x64d()
     # net = MobileNet()
-    net = LeNet()
 
 if use_cuda:
     net.cuda()
@@ -138,11 +137,56 @@ def test(epoch):
         }
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/lenet_quick.t7')
+        torch.save(state, './checkpoint/resnet18_quick_ortho_lsuv_init.t7')
         best_acc = acc
 
+import torch.optim as optim
+def cos_dist(anchor,positive):
+    """Given batch of anchor descriptors and positive descriptors calculate distance matrix"""
+    return torch.bmm(anchor.unsqueeze(0), torch.t(positive).unsqueeze(0)).squeeze(0)
+def gor_filter_loss(model):
+    loss = None
+    for param in model.parameters():
+        sh = param.shape
+        if len(sh) > 1:
+            #print sh
+            weights = param.view(param.size(0),-1)
+            dist_matrix = cos_dist(weights.t(),weights.t())**2
+            eye = torch.autograd.Variable(1.0 - torch.eye(dist_matrix.size(1))).cuda()
+            dist_without_min_on_diag = eye * dist_matrix
+            max_neg_a = torch.max(dist_without_min_on_diag,1)[0]#) + 1e-8)
+            if loss is None:
+                loss = max_neg_a.mean()
+            else:
+                loss+=  max_neg_a.mean()
+    return loss
+def binary_weights_init(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        m.weight.data = torch.sign(m.weight.data).float()
+        try:
+            nn.init.constant(m.bias, 0)
+        except:
+            pass
+    return
+from LSUV import LSUVinit
+for batch_idx, (inputs, targets) in enumerate(trainloader):
+    if use_cuda:
+        inputs, targets = inputs.cuda(), targets.cuda()
+    inputs, targets = Variable(inputs), Variable(targets)
+    break
 
-for epoch in range(0,400):
+net = LSUVinit(net,inputs, needed_std = 1.0, std_tol = 0.1, max_attempts = 10, do_orthonorm = True, cuda = use_cuda)
+net.train()
+optimizer1 = optim.SGD(net.parameters(), lr=0.01,momentum=0.9, dampening=0.9)
+for i in range(0):
+    optimizer1.zero_grad()
+    loss = gor_filter_loss(net)
+    if i %100 == 0:
+        print (loss)
+    loss.backward()
+    optimizer1.step()
+
+for epoch in range(0,100):
     train(epoch)
     # update the optimizer learning rate
     if epoch in steps_lr:

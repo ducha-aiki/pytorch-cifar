@@ -61,12 +61,11 @@ if args.resume:
 else:
     print('==> Building model..')
     # net = VGG('VGG19')
-    #    net = ResNet18()
+    net = ResNet18()
     # net = GoogLeNet()
     # net = DenseNet121()
     # net = ResNeXt29_2x64d()
     # net = MobileNet()
-    net = LeNet()
 
 if use_cuda:
     net.cuda()
@@ -138,11 +137,11 @@ def test(epoch):
         }
         if not os.path.isdir('checkpoint'):
             os.mkdir('checkpoint')
-        torch.save(state, './checkpoint/lenet_quick.t7')
+        torch.save(state, './checkpoint/resnet18_quick.t7')
         best_acc = acc
 
 
-for epoch in range(0,400):
+for epoch in range(0,100):
     train(epoch)
     # update the optimizer learning rate
     if epoch in steps_lr:
