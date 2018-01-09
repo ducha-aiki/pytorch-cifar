@@ -9,7 +9,7 @@ import torch.backends.cudnn as cudnn
 import numpy as np
 import torchvision
 import torchvision.transforms as transforms
-
+import sys
 import os
 import argparse
 
@@ -68,6 +68,45 @@ testloader = torch.utils.data.DataLoader(testset, batch_size=100, shuffle=False,
 
 classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 
+def weights_init(m):
+    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
+        print (args.init)
+        if args.init == 'normal':
+            nn.init.kaiming_normal(m.weight)
+        elif args.init == 'binormal3':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 3.0)
+        elif args.init == 'binormal3.5':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 3.5)
+        elif args.init == 'binormal2.5':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 2.5)
+        elif args.init == 'binormal4':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 4.0)
+        elif args.init == 'binormal4':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 4.0)
+        elif args.init == 'binormal5':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 5.0)
+        elif args.init == 'binormal6':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 6.0)
+        elif args.init == 'binormal2':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 2.0)
+        elif args.init == 'uniform':
+            nn.init.kaiming_uniform(m.weight)
+        elif args.init == 'laplace':
+            nn.init.kaiming_laplace(m.weight)
+        elif args.init == 'ortho':
+            nn.init.orthogonal(m.weight)
+        elif args.init == 'ortho_laplace':
+            nn.init.orthogonal_laplace(m.weight)
+        elif args.init == 'ortho_uniform':
+            nn.init.orthogonal_uniform(m.weight)
+        else:
+            print('unknown init type')
+            sys.exit(1)
+        try:
+            nn.init.constant(m.bias, 0)
+        except:
+            pass
+
 # Model
 if args.resume:
     # Load checkpoint.
@@ -85,6 +124,7 @@ else:
     # net = DenseNet121()
     # net = ResNeXt29_2x64d()
     # net = MobileNet()
+net.apply(weights_init)
 
 if use_cuda:
     net.cuda()
@@ -204,43 +244,6 @@ def test(epoch):
 #        print (loss)
 #    loss.backward()
 #    optimizer1.step()
-def weights_init(m):
-    if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-        if args.init == 'normal':
-            nn.init.kaiming_normal(m.weight)
-        if args.init == 'binormal3':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 3.0)
-        if args.init == 'binormal3.5':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 3.5)
-        if args.init == 'binormal2.5':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 2.5)
-        if args.init == 'binormal4':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 4.0)
-        if args.init == 'binormal4':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 4.0)
-        if args.init == 'binormal5':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 5.0)
-        if args.init == 'binormal6':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 6.0)
-        if args.init == 'binormal2':
-            nn.init.kaiming_binormal(m.weight, dmu_coef = 2.0)
-        elif args.init == 'uniform':
-            nn.init.kaiming_uniform(m.weight)
-        elif args.init == 'laplace':
-            nn.init.kaiming_laplace(m.weight)
-        elif args.init == 'ortho':
-            nn.init.orthogonal(m.weight)
-        elif args.init == 'ortho_laplace':
-            nn.init.orthogonal_laplace(m.weight)
-        elif args.init == 'ortho_uniform':
-            nn.init.orthogonal_uniform(m.weight)
-        else:
-            print('unknown init type')
-            sys.exit(1)
-        try:
-            nn.init.constant(m.bias, 0)
-        except:
-            pass
 
 for epoch in range(0,100):
     train(epoch)
