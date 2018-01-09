@@ -6,7 +6,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.backends.cudnn as cudnn
-
+import numpy as np
 import torchvision
 import torchvision.transforms as transforms
 
@@ -27,14 +27,22 @@ parser.add_argument('--gpu-id', default='0', type=str,
                     help='id(s) for CUDA_VISIBLE_DEVICES')
 parser.add_argument('--init', default='normal', type=str,
                     help='initialization. Variants: normal, uniform, laplace, ortho, ortho_laplace')
+parser.add_argument('--seed', type=int, default=0, metavar='S',
+                    help='random seed (default: 0)')
 args = parser.parse_args()
 os.environ['CUDA_VISIBLE_DEVICES'] = args.gpu_id
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 if args.cuda:
     cudnn.benchmark = True
+    torch.cuda.manual_seed_all(args.seed)
 
 use_cuda = args.cuda
+
+# set random seeds
+torch.manual_seed(args.seed)
+np.random.seed(args.seed)
+
 best_acc = 0  # best test accuracy
 start_epoch = 0  # start from epoch 0 or last checkpoint epoch
 
@@ -200,6 +208,22 @@ def weights_init(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
         if args.init == 'normal':
             nn.init.kaiming_normal(m.weight)
+        if args.init == 'binormal3':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 3.0)
+        if args.init == 'binormal3.5':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 3.5)
+        if args.init == 'binormal2.5':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 2.5)
+        if args.init == 'binormal4':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 4.0)
+        if args.init == 'binormal4':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 4.0)
+        if args.init == 'binormal5':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 5.0)
+        if args.init == 'binormal6':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 6.0)
+        if args.init == 'binormal2':
+            nn.init.kaiming_binormal(m.weight, dmu_coef = 2.0)
         elif args.init == 'uniform':
             nn.init.kaiming_uniform(m.weight)
         elif args.init == 'laplace':
@@ -208,6 +232,8 @@ def weights_init(m):
             nn.init.orthogonal(m.weight)
         elif args.init == 'ortho_laplace':
             nn.init.orthogonal_laplace(m.weight)
+        elif args.init == 'ortho_uniform':
+            nn.init.orthogonal_uniform(m.weight)
         else:
             print('unknown init type')
             sys.exit(1)
